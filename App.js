@@ -2,78 +2,125 @@ import React from 'react';
 import {
   ActivityIndicator,
   Button,
-  Clipboard,
   Image,
-  Share,
   StatusBar,
   StyleSheet,
   Text,
-  TouchableOpacity,
+  ScrollView,
   View,
+  Dimensions,
 } from 'react-native';
-import { Constants, ImagePicker, Permissions } from 'expo';
-import uuid from 'uuid';
+import { ImagePicker, Permissions } from 'expo';
 import * as firebase from 'firebase';
 
+// this is to avoid all the yellow warnings of expo
 console.disableYellowBox = true;
 
-const url =
-  'https://firebasestorage.googleapis.com/v0/b/blobtest-36ff6.appspot.com/o/Obsidian.jar?alt=media&token=93154b97-8bd9-46e3-a51f-67be47a4628a';
-
+// firebase configurations for the project
 const firebaseConfig = {
-  apiKey: 'AIzaSyAlZruO2T_JNOWn4ysfX6AryR6Dzm_VVaA',
-  authDomain: 'blobtest-36ff6.firebaseapp.com',
-  databaseURL: 'https://blobtest-36ff6.firebaseio.com',
-  storageBucket: 'blobtest-36ff6.appspot.com',
-  messagingSenderId: '506017999540',
+  apiKey: "AIzaSyB-WNogLywSkad69Ex9-ZxsJucQ0TeVYy0",
+    authDomain: "tagmosquito.firebaseapp.com",
+    databaseURL: "https://tagmosquito.firebaseio.com",
+    projectId: "tagmosquito",
+    storageBucket: "tagmosquito.appspot.com",
+    messagingSenderId: "415327492570"
 };
 
+// initializing the firebase instance here
 firebase.initializeApp(firebaseConfig);
 
+// stylesheet
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  button: {
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  empty: {
+    height: 10,
+  },
+  bigText: {
+    fontSize: 18,
+  },
+  imageContainer: {
+    borderTopRightRadius: 3,
+    borderTopLeftRadius: 3,
+    shadowColor: 'rgba(0,0,0,1)',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 4, height: 4 },
+    shadowRadius: 5,
+    flexDirection: 'row'
+  }
+
+})
+
+
+
+
 export default class App extends React.Component {
+
+  // state will be keeping variables like image, uploading and the tag
   state = {
-    image: null,
+    images: [],
+    tags: [],
     uploading: false,
+    tag: "",
   };
   
+  // asking for permissions for the camera and camera roll
   async componentDidMount() {
+    
     await Permissions.askAsync(Permissions.CAMERA_ROLL);
-    await Permissions.askAsync(Permissions.CAMERA);
+    await Permissions.askAsync(Permissions.CAMERA)
+    // let the user know that app won't work without it
+    .catch((error) => {
+      alert("You did not allow the camera!")
+    });
+  
   }
 
   render() {
-    let { image } = this.state;
-
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        {image ? null : (
-          <Text
-            style={{
-              fontSize: 20,
-              marginBottom: 20,
-              textAlign: 'center',
-              marginHorizontal: 15,
-            }}>
-            Example: Upload ImagePicker result
-          </Text>
-        )}
-
+    
+      <View style = {styles.container}>
+        {this._maybeRenderUploadingOverlay()}
         <Button
-          onPress={this._pickImage}
-          title="Pick an image from camera roll"
-        />
+          style = {styles.button} 
+          onPress={this._takePhoto} 
+          title="Take a photo"/>
 
-        <Button onPress={this._takePhoto} title="Take a photo" />
+          <View style={styles.empty}></View>
+          
+        <Button
+          style={styles.button}
+          onPress={this._pickImage}
+          title="Pick an image from camera roll"/>
+
+          <View style={styles.empty}></View>
 
         {this._maybeRenderImage()}
-        {this._maybeRenderUploadingOverlay()}
+        
+          
+        <View style={styles.empty}></View>
 
+        {this.state.images.length > 0 ? this.state.images.length <= 0 : (
+          <Text style={styles.bigText}>
+            Take or choose a photo to classify
+          </Text>
+        )}
         <StatusBar barStyle="default" />
       </View>
+     
+    
     );
   }
 
   _maybeRenderUploadingOverlay = () => {
+    // some animation for the uploading
     if (this.state.uploading) {
       return (
         <View
@@ -91,99 +138,129 @@ export default class App extends React.Component {
     }
   };
 
+    // if the image is ready, show it to the user
   _maybeRenderImage = () => {
-    let { image } = this.state;
-    if (!image) {
+    // check if the image is there
+    let { images } = this.state;
+    // tags for the images
+    let {tags}  = this.state;
+    if (images.length <= 0) {
+      // if not return nothing
       return;
     }
-
+   
     return (
-      <View
-        style={{
-          marginTop: 30,
-          width: 250,
-          borderRadius: 3,
-          elevation: 2,
-        }}>
-        <View
-          style={{
-            borderTopRightRadius: 3,
-            borderTopLeftRadius: 3,
-            shadowColor: 'rgba(0,0,0,1)',
-            shadowOpacity: 0.2,
-            shadowOffset: { width: 4, height: 4 },
-            shadowRadius: 5,
-            overflow: 'hidden',
-          }}>
-          <Image source={{ uri: image }} style={{ width: 250, height: 250 }} />
+      <View style = {{flex: -1, alignContent: 'center', justifyContent: 'center'}}>
+        <View style={styles.imageContainer}>
+        { images.map((data, index) => {
+            return (
+              <View
+                style={styles.imageContainer}>
+                <View style={{flex: 0, flexDirection: 'column'}}>
+                <Image source={{ uri: data.url }} style={{ marginLeft: 5, marginRight: 5, width: 120, height: 120 }}/>
+                <Text>{tags[index+1]}</Text>
+                </View>
+              </View>  
+            )
+        })  }
         </View>
+        
+        <View style={styles.empty}></View>
 
-        <Text
-          onPress={this._copyToClipboard}
-          onLongPress={this._share}
-          style={{ paddingVertical: 10, paddingHorizontal: 10 }}>
-          {image}
-        </Text>
+        <View style= {{flex: 0, flexDirection: 'column', alignContent: 'center', justifyContent: 'center'}}> 
+        <Button
+          style = {styles.button}
+          onPress = {this._clear}
+          title="Classify"/>
+
+          <View style={styles.empty}></View>
+
+          <Button
+          style = {styles.button}
+          onPress = {this._clear}
+          title="Clear"/>
+        </View>
       </View>
     );
   };
 
-  _share = () => {
-    Share.share({
-      message: this.state.image,
-      title: 'Check out this photo',
-      url: this.state.image,
-    });
-  };
 
-  _copyToClipboard = () => {
-    Clipboard.setString(this.state.image);
-    alert('Copied image URL to clipboard');
-  };
 
+  // clear the image from the view
+  _clear = () => {
+    this.setState({
+      images: [],
+      tags: [],
+    })
+  }
+
+  // invoke the camera and handle the result
   _takePhoto = async () => {
-    let pickerResult = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [4, 3],
-    });
+    let pickerResult = await ImagePicker.launchCameraAsync({});
 
     this._handleImagePicked(pickerResult);
   };
 
+  // invoke the image picker and handle the result
   _pickImage = async () => {
-    let pickerResult = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: true,
-      aspect: [4, 3],
-    });
-
+    let pickerResult = await ImagePicker.launchImageLibraryAsync({});
     this._handleImagePicked(pickerResult);
   };
 
+  // handle the image includes parsing it as image, then sending it to the database, 
+  // as well as updating the state when the result comes in
   _handleImagePicked = async pickerResult => {
     try {
+      // turn on the uploading view
       this.setState({ uploading: true });
-
+      // if the picture was valid
       if (!pickerResult.cancelled) {
-        uploadUrl = await uploadImageAsync(pickerResult.uri);
-        this.setState({ image: uploadUrl });
+        let index = this.state.images.length + 1;
+        // upload the image to the storage and get the url
+        uploadUrl = await uploadImageAsync(pickerResult.uri, index);
+        // set the app state to the following
+        
+        const image = {
+          url: uploadUrl,
+          index: index
+        }
+        this.setState({images: [...this.state.images, image ], tag: "Classifying..."});
+        // upload new json object to the firebase realtime database
+        firebase.database().ref('images/' + index.toString()).on('value', (data) => {
+          const tags = Array.from(this.state.tags);
+          tags[index] = data.child("result").val();
+         // tags.splice(index, 0, data.child("result").val());
+          this.setState({ tags: tags});
+        })
+
+      }
+      else{
+        alert("No picture captured");
       }
     } catch (e) {
       console.log(e);
       alert('Upload failed, sorry :(');
     } finally {
+      // turn off the uploading view
       this.setState({ uploading: false });
     }
   };
 }
 
-async function uploadImageAsync(uri) {
+// uploads the blob to the firebase storage
+async function uploadImageAsync(uri, index) {
   const response = await fetch(uri);
   const blob = await response.blob();
   const ref = firebase
     .storage()
     .ref()
-    .child(uuid.v4());
-
+    .child(index+'.jpg')
   const snapshot = await ref.put(blob);
+  // put the result tag in the database
+  const fire = firebase.database().ref('images/')
+  fire.child(index+ '/').set({
+    result: "Classifying..."
+  })
+  
   return snapshot.downloadURL;
 }
