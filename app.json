@@ -1,5 +1,15 @@
 {
   "expo": {
-    "sdkVersion": "28.0.0"
+    "name": "Tag Mosquito",
+     "icon": "./icon.png",
+     "version": "1.0.0",
+     "slug": "tagmosquito",
+    "sdkVersion": "28.0.0",
+    "ios": {
+      "bundleIdentifier": "com.usfscl.tagmosquito2018"
+    },
+    "android": {
+      "package": "com.usfscl.tagmosquito2018"
+    }
   }
 }

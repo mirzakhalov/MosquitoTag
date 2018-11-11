@@ -58,15 +58,12 @@ const styles = StyleSheet.create({
 
 })
 
-
-
-
 export default class App extends React.Component {
 
   // state will be keeping variables like image, uploading and the tag
   state = {
     images: [],
-    tags: [],
+    tags: ['Classifying', 'Classifying', 'Classifying'],
     uploading: false,
     tag: "",
   };
@@ -98,7 +95,7 @@ export default class App extends React.Component {
         <Button
           style={styles.button}
           onPress={this._pickImage}
-          title="Pick an image from camera roll"/>
+          title="Pick images from camera roll"/>
 
           <View style={styles.empty}></View>
 
@@ -117,6 +114,15 @@ export default class App extends React.Component {
      
     
     );
+  }
+  makeid() {
+    var text = "";
+    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  
+    for (var i = 0; i < 10; i++)
+      text += possible.charAt(Math.floor(Math.random() * possible.length));
+  
+    return text;
   }
 
   _maybeRenderUploadingOverlay = () => {
@@ -142,8 +148,6 @@ export default class App extends React.Component {
   _maybeRenderImage = () => {
     // check if the image is there
     let { images } = this.state;
-    // tags for the images
-    let {tags}  = this.state;
     if (images.length <= 0) {
       // if not return nothing
       return;
@@ -158,7 +162,7 @@ export default class App extends React.Component {
                 style={styles.imageContainer}>
                 <View style={{flex: 0, flexDirection: 'column'}}>
                 <Image source={{ uri: data.url }} style={{ marginLeft: 5, marginRight: 5, width: 120, height: 120 }}/>
-                <Text>{tags[index+1]}</Text>
+                <Text>{this.state.tags[index+1]}</Text>
                 </View>
               </View>  
             )
@@ -168,11 +172,7 @@ export default class App extends React.Component {
         <View style={styles.empty}></View>
 
         <View style= {{flex: 0, flexDirection: 'column', alignContent: 'center', justifyContent: 'center'}}> 
-        <Button
-          style = {styles.button}
-          onPress = {this._clear}
-          title="Classify"/>
-
+        
           <View style={styles.empty}></View>
 
           <Button
@@ -196,15 +196,25 @@ export default class App extends React.Component {
 
   // invoke the camera and handle the result
   _takePhoto = async () => {
-    let pickerResult = await ImagePicker.launchCameraAsync({});
-
-    this._handleImagePicked(pickerResult);
+    if(this.state.images.length < 3){
+      let pickerResult = await ImagePicker.launchCameraAsync({});
+      this._handleImagePicked(pickerResult);
+    }
+    else{
+      alert('No more than 3 images!');
+    }
+    
   };
 
   // invoke the image picker and handle the result
   _pickImage = async () => {
-    let pickerResult = await ImagePicker.launchImageLibraryAsync({});
-    this._handleImagePicked(pickerResult);
+    if(this.state.images.length < 3){
+      let pickerResult = await ImagePicker.launchImageLibraryAsync({});
+      this._handleImagePicked(pickerResult);
+    }
+    else{
+      alert('No more than 3 images')
+    }
   };
 
   // handle the image includes parsing it as image, then sending it to the database, 
@@ -215,20 +225,25 @@ export default class App extends React.Component {
       this.setState({ uploading: true });
       // if the picture was valid
       if (!pickerResult.cancelled) {
+        
         let index = this.state.images.length + 1;
+        let imageId = this.makeid();
+        console.log(imageId)
         // upload the image to the storage and get the url
-        uploadUrl = await uploadImageAsync(pickerResult.uri, index);
+        uploadUrl = await uploadImageAsync(pickerResult.uri, imageId);
         // set the app state to the following
         
         const image = {
           url: uploadUrl,
-          index: index
+          index: imageId,
         }
-        this.setState({images: [...this.state.images, image ], tag: "Classifying..."});
+        this.setState({images: [...this.state.images, image]});
         // upload new json object to the firebase realtime database
-        firebase.database().ref('images/' + index.toString()).on('value', (data) => {
+        firebase.database().ref('outputs/' + image.index).on('value', (data) => {
           const tags = Array.from(this.state.tags);
+          console.log("Updating index: " + index);
           tags[index] = data.child("result").val();
+          console.log(tags[index]);
          // tags.splice(index, 0, data.child("result").val());
           this.setState({ tags: tags});
         })
@@ -259,6 +274,10 @@ async function uploadImageAsync(uri, index) {
   // put the result tag in the database
   const fire = firebase.database().ref('images/')
   fire.child(index+ '/').set({
+    result: "Classifying..."
+  })
+
+  firebase.database().ref('outputs/' + index + '/').set({
     result: "Classifying..."
   })
   
